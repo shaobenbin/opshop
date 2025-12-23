@@ -1,0 +1,61 @@
+workspaces:
+    - id: "1766417695312"
+      name: 鲸鱼公司
+      nodes:
+          - id: "1766417755261"
+            name: 生产服务器-05
+            ip: 121.57.165.264
+            user: server
+            provider: aliyun
+            owner: 鲸鱼公司
+            cpu: 4
+            memory: 8G
+            expiration: "2026-11-14"
+            remarks: 生成服务器
+            apps:
+                - id: "1766417777836"
+                  name: 分销系统wap端
+                  project: distributor-wap
+                  deploy_path: /home/server/app/distributor/distributor-wap
+                  domain: https://wap.distributor.xxx.cn/
+                  lang: Uniapp
+                  app_type: wap
+                  port: 8080
+                  out_log_path: ""
+                  err_log_path: ""
+                  manager_script: ""
+                  tags: []
+                  remarks: uniapp项目
+                  health:
+                      url: ""
+                      keyword: ""
+                - id: "1766457506552"
+                  name: 分销系统wap端api服务
+                  project: ' distributor-api/distributor_client'
+                  deploy_path: /home/server/app/distributor/distributor_client_api
+                  domain: https://wap.distributor.xxx.cn
+                  lang: Java
+                  app_type: api
+                  port: 18833
+                  out_log_path: log/appout.log
+                  err_log_path: log/appout.log
+                  manager_script: distributor-client-api.sh
+                  tags: []
+                  remarks: ""
+                  health:
+                      url: ""
+                      keyword: ""
+          - id: "1766473321447"
+            name: NEW_NODE
+            ip: 0.0.0.0
+            user: root
+            provider: ""
+            owner: ""
+            cpu: 1
+            memory: 1G
+            expiration: ""
+            remarks: ""
+            apps: []
+    - id: "1766461712326"
+      name: 私人
+      nodes: []
