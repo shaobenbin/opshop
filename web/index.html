@@ -2,18 +2,16 @@
 <html lang="zh-CN">
 <head>
 	<meta charset="UTF-8">
-	<title>OpsHop // TERMINAL_V3.0</title>
+	<title>OpsHop // ASSET_MANAGER</title>
 	<link rel="stylesheet" href="/static/css/style.css">
 	<script src="/static/lib/vue.global.js"></script>
 	<script src="/static/lib/Sortable.min.js"></script>
 	<script src="/static/lib/vuedraggable.umd.min.js"></script>
-	<!-- ！！！必须增加下面这一行 ！！！ -->
-	<script src="/static/js/components/NodeModal.js"></script>
 </head>
 <body>
 <div id="app" style="display: contents;">
 	<aside class="sidebar">
-		<div class="sidebar-header">OPSHOP</div>
+		<div class="sidebar-header">OPSHOP // V0.1.1</div>
 		<div class="lang-switcher">
 			<span :class="['lang-btn', lang === 'zh' ? 'active' : '']" @click="setLang('zh')">中</span>
 			<span :class="['lang-btn', lang === 'en' ? 'active' : '']" @click="setLang('en')">EN</span>
@@ -32,43 +30,42 @@
 	<main class="main">
 		<div class="dashboard-header" v-if="currentWorkspace">
 			<h1>{{ currentWorkspace.name }}</h1>
-<!--			<button class="btn btn-primary" @click="saveConfig">{{ t('sync_disk') }}</button>-->
 		</div>
 
 		<div class="grid" v-if="currentWorkspace">
 			<node-card
 				v-for="node in currentWorkspace.nodes"
-				:key="node.id"
-				:node="node"
-				:t="t"
+				:key="node.id" :node="node" :t="t"
 				@edit-node="editNode"
-				@edit-app="openAppEditor"
-				@add-app="addApp"
 				@delete-node="deleteNode"
-				@delete-app="deleteApp">
+				@add-user="addUser"
+				@edit-user="editUser"
+				@delete-user="deleteUser"
+				@add-app="addApp"
+				@edit-app="openAppEditor"
+				@delete-app="deleteApp"
+				@save-config="saveConfig">
 			</node-card>
-			<div class="add-unit-placeholder" @click="addNode"
-				 style="height:60px; border:1px dashed #333; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#444;">
+			<div class="add-unit-placeholder" @click="addNode">
 				[ + {{ t('add_node') }} ]
 			</div>
 		</div>
 	</main>
 
-	<app-modal v-if="editingApp" :app="editingApp" :t="t" @close="editingApp = null" @save="saveAppEdit"></app-modal>
-	<!-- NodeModal 也可以依此类推拆出... -->
-	<!-- 组件挂载点 -->
-	<node-modal
-		v-if="editingNode"
-		:node="editingNode"
-		:t="t"
-		@close="editingNode = null"
-		@save="saveNodeEdit">
-	</node-modal>
+	<!-- Modals -->
+	<node-modal v-if="editingNode" :node="editingNode" :t="t" @close="editingNode = null" @save="saveNodeEdit"></node-modal>
+	<user-modal v-if="editingUser" :user="editingUser" :t="t" @close="editingUser = null" @save="saveUserEdit"></user-modal>
+	<app-modal
+		v-if="editingApp" :app="editingApp" :t="t"
+		:lang-options="langOptions" :type-options="typeOptions"
+		@close="editingApp = null" @save="saveAppEdit">
+	</app-modal>
 </div>
 
-<!-- 业务脚本加载 -->
 <script src="/static/js/i18n.js"></script>
 <script src="/static/js/components/NodeCard.js"></script>
+<script src="/static/js/components/NodeModal.js"></script>
+<script src="/static/js/components/UserModal.js"></script>
 <script src="/static/js/components/AppModal.js"></script>
 <script src="/static/js/app.js"></script>
 </body>

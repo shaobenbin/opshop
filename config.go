@@ -30,19 +30,25 @@ type App struct {
 	Health        HealthCheck `yaml:"health" json:"health"`
 }
 
+type User struct {
+	ID       string `yaml:"id" json:"id"`
+	Username string `yaml:"username" json:"username"`
+	Password string `yaml:"password" json:"password"` // 如果为空，则视为免密登录
+	Apps     []App  `yaml:"apps" json:"apps"`         // 应用挂在用户下
+}
+
 // Node 模型升级：增加规格、到期时间和备注
 type Node struct {
 	ID         string `yaml:"id" json:"id"`
 	Name       string `yaml:"name" json:"name"`
 	IP         string `yaml:"ip" json:"ip"`
-	User       string `yaml:"user" json:"user"`
 	Provider   string `yaml:"provider" json:"provider"`
 	Owner      string `yaml:"owner" json:"owner"`
 	CPU        int    `yaml:"cpu" json:"cpu"`               // CPU 核数 (vCPU)
 	Memory     string `yaml:"memory" json:"memory"`         // 内存大小 (e.g. 8G)
 	Expiration string `yaml:"expiration" json:"expiration"` // 到期时间 (e.g. 2026-01-01)
 	Remarks    string `yaml:"remarks" json:"remarks"`       // 服务器备注
-	Apps       []App  `yaml:"apps" json:"apps"`
+	Users      []User `yaml:"users" json:"users"`           // 服务器包含多个用户
 }
 
 type Workspace struct {
@@ -73,7 +79,7 @@ func LoadConfig() (*Config, error) {
 	if parseErr != nil {
 		return nil, parseErr
 	}
-	
+
 	if conf.Workspaces == nil {
 		conf.Workspaces = []Workspace{}
 	}

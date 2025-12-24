@@ -1,240 +1,134 @@
+/* --- 1. 全局变量 (JetBrains Darcula / New UI) --- */
 :root {
-	/* JetBrains New UI 色彩体系 */
-	--bg-deep: #1e1f22;      /* 主背景色 (New UI 背景) */
-	--bg-surface: #2b2d30;   /* 侧边栏及卡片背景 */
-	--bg-card: #2b2d30;      /* 容器背景 */
-	--bg-item: #1e1f22;      /* 内部 App 项背景 */
-
-	--border: #393b40;       /* 标准边框色 */
-	--border-active: #3574f0;/* 激活/聚焦边框蓝色 */
+	--bg-deep: #1e1f22;      /* 核心底色 */
+	--bg-surface: #2b2d30;   /* 侧边栏 & 卡片主体背景 */
+	--bg-card: #141417;      /* 沉浸式卡片背景 */
+	--border: #393b40;       /* 标准分割线 */
+	--border-hover: #4e5157; /* 悬停边框 */
+	--border-active: #3574f0;/* 激活蓝 */
 
 	--text-main: #dfe1e5;    /* 主文字颜色 */
-	--text-dim: #707275;     /* 次要文字/说明 */
+	--text-dim: #707275;     /* 说明性文字 */
 
-	/* 重点功能色 */
-	--jb-blue: #3574f0;      /* 标志性蓝色 */
-	--jb-green: #59a869;     /* 运行/成功 (String 绿色) */
-	--jb-orange: #eda200;    /* 警告/项目名 (Keyword 橙色) */
-	--btn-hover: #4e5157;    /* 按钮悬停背景 */
+	--jb-blue: #3574f0;      /* 链接与主按钮蓝 */
+	--jb-green: #59a869;     /* 运行/成功绿 */
+	--jb-orange: #eda200;    /* 告警/项目名橙 */
+	--jb-red: #db5860;       /* 错误/删除红 */
 }
 
+/* --- 2. 基础重置 --- */
 body {
 	background-color: var(--bg-deep);
 	color: var(--text-main);
 	font-family: 'JetBrains Mono', 'Inter', system-ui, sans-serif;
-	margin: 0; display: flex; height: 100vh; overflow: hidden;
+	margin: 0;
+	display: flex;
+	height: 100vh;
+	overflow: hidden;
 }
 
-/* 侧边栏 - 模拟 IDE 工具窗口 */
+/* --- 3. 左侧工作空间导航栏 --- */
 .sidebar {
-	width: 260px; background: var(--bg-surface);
+	width: 260px;
+	background: var(--bg-surface);
 	border-right: 1px solid var(--border);
 	display: flex; flex-direction: column; z-index: 200;
 }
-
-.sidebar-header {
-	padding: 30px 20px; font-size: 14px; font-weight: 600;
-	color: var(--text-main); border-bottom: 1px solid var(--border);
-	letter-spacing: 0.5px; text-transform: uppercase;
-}
-
-.lang-switcher {
-	padding: 10px 20px; border-bottom: 1px solid var(--border);
-	display: flex; gap: 10px; font-size: 11px;
-}
+.sidebar-header { padding: 25px 20px 10px; font-size: 14px; font-weight: 600; color: var(--text-main); letter-spacing: 1px; text-transform: uppercase; }
+.lang-switcher { padding: 0 20px 15px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; font-size: 11px; }
 .lang-btn { cursor: pointer; color: var(--text-dim); transition: 0.2s; }
-.lang-btn.active { color: var(--jb-blue); font-weight: bold; }
-
-.ws-item {
-	padding: 12px 25px; cursor: pointer; transition: 0.2s;
-	color: var(--text-main); border-left: 0; font-size: 13px;
-}
+.lang-btn.active { color: var(--jb-blue); font-weight: bold; text-decoration: underline; text-underline-offset: 4px; }
+.ws-item { padding: 12px 25px; cursor: pointer; transition: 0.15s; color: var(--text-main); font-size: 13px; }
 .ws-item:hover { background: #32353a; }
-.ws-item.active {
-	background: #2e436e; /* JB 经典的选中淡蓝色 */
-	color: #fff;
+.ws-item.active { background: #2e436e; color: #fff; }
+
+/* --- 4. 主面板布局 --- */
+.main { flex: 1; overflow-y: auto; padding: 40px; position: relative; transition: margin-right 0.3s ease; }
+.dashboard-header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+.dashboard-header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+.grid { display: flex; flex-direction: column; gap: 30px; }
+
+.add-unit-placeholder {
+	display: flex; align-items: center; justify-content: center; height: 60px;
+	border: 1px dashed var(--border); border-radius: 6px; cursor: pointer;
+	color: var(--text-dim); font-size: 12px; font-weight: bold; transition: 0.2s; background: transparent;
+}
+.add-unit-placeholder:hover { border-color: var(--jb-blue); color: var(--jb-blue); background: rgba(53, 116, 240, 0.05); }
+
+/* --- 5. 侧边编辑抽屉 (取代弹窗) --- */
+.modal-mask {
+	position: fixed;
+	top: 0; left: 0; width: 100%; height: 100%;
+	background: rgba(0, 0, 0, 0.2); /* 侧边栏模式背景遮罩变浅，突出侧边感 */
+	z-index: 1000;
 }
 
-/* 主区域 */
-.main { flex: 1; overflow-y: auto; padding: 40px; position: relative; }
-.dashboard-header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
-
-/* 单列布局 */
-.grid {
+.modal-box {
+	position: fixed;
+	top: 0;
+	right: 0; /* 固定在右侧 */
+	width: 550px; /* 侧边栏固定宽度 */
+	height: 100vh; /* 撑满高度 */
+	background: var(--bg-surface);
+	border-left: 1px solid var(--border);
+	box-shadow: -10px 0 30px rgba(0,0,0,0.5);
 	display: flex;
 	flex-direction: column;
-	gap: 25px;
+	z-index: 1001;
+	/* 进场动画：从右侧滑入 */
+	animation: slideIn 0.3s ease-out;
 }
 
-.node-card {
-	background: var(--bg-card); border: 1px solid var(--border);
-	border-radius: 8px; position: relative;
-	display: flex; flex-direction: column; width: 100%;
-	box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-.node-card:hover { border-color: #4e5157; }
-
-/* 操作按钮组容器 */
-.action-group {
-	position: absolute;
-	right: 15px;
-	top: 15px;
-	display: flex;
-	gap: 8px;
-	z-index: 20;
-	opacity: 0; /* 默认隐藏 */
-	transition: 0.2s;
+@keyframes slideIn {
+	from { transform: translateX(100%); }
+	to { transform: translateX(0); }
 }
 
-.node-card:hover > .action-group,
-.app-item:hover > .action-group {
-	opacity: 1;
-}
-
-/* 编辑按样式 */
-.edit-trigger {
-	background: var(--bg-deep);
-	color: var(--jb-blue);
-	padding: 3px 10px;
-	border-radius: 4px;
-	font-size: 11px;
-	font-weight: bold;
-	border: 1px solid var(--border);
-	cursor: pointer;
-}
-.edit-trigger:hover {
-	border-color: var(--jb-blue);
-	background: var(--bg-surface);
-}
-
-/* 删除按钮样式 - JB 警告红 */
-.delete-trigger {
-	background: var(--bg-deep);
-	color: #db5860; /* JB Error Red */
-	padding: 3px 10px;
-	border-radius: 4px;
-	font-size: 11px;
-	font-weight: bold;
-	border: 1px solid var(--border);
-	cursor: pointer;
-}
-.delete-trigger:hover {
-	border-color: #db5860;
-	background: #412426; /* 暗红色背景 */
-	color: #ff6b6b;
-}
-
-/* 其他修正以适配 JB 风格 */
-.node-owner-badge {
-	font-size: 9px; padding: 2px 6px; background: #32353a; color: #dfe1e5; border: 1px solid var(--border);
-}
-.node-provider-text {
-	font-size: 9px; color: var(--text-dim);
-}
-
-.node-card:hover > .edit-trigger, .app-item:hover > .edit-trigger { opacity: 1; }
-.edit-trigger:hover { background: var(--btn-hover); border-color: var(--jb-blue); color: var(--jb-blue); }
-
-/* 服务器头部 */
-.node-header {
-	padding: 20px 25px; background: rgba(255,255,255,0.02);
-	border-bottom: 1px solid var(--border);
-	display: flex; align-items: center; justify-content: space-between;
-}
-.node-info-main { display: flex; flex-direction: column; gap: 6px; }
-.node-title { font-size: 18px; font-weight: 600; color: var(--jb-blue); }
-.node-specs-row { display: flex; gap: 20px; font-size: 12px; color: var(--text-dim); }
-.node-specs-row b { color: var(--jb-green); font-weight: 500; }
-.node-badge-row { display: flex; gap: 8px; margin-bottom: 4px; }
-
-/* 应用列表 - 双列网格 */
-.app-list {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 12px;
-	padding: 20px;
-}
-
-.app-item {
-	background: var(--bg-item); border: 1px solid var(--border);
-	padding: 14px; border-radius: 6px;
-	cursor: grab; position: relative; transition: 0.2s;
-}
-.app-item:hover {
-	border-color: var(--jb-blue);
-	background: #26282e;
-}
-
-.app-project { font-size: 11px; color: var(--jb-orange); margin-bottom: 4px; font-weight: 600; }
-.app-title-row { display: flex; justify-content: space-between; align-items: center; }
-.app-title { font-size: 14px; font-weight: 600; color: var(--text-main); }
-.app-path { font-size: 11px; color: #6a8759; margin-top: 8px; font-family: 'JetBrains Mono'; }
-
-/* 新增操作区 */
-.add-unit-placeholder {
-	display: flex; align-items: center; justify-content: center;
-	height: 50px; border: 1px dashed var(--border); border-radius: 6px;
-	cursor: pointer; transition: 0.2s; color: var(--text-dim); font-size: 12px;
-}
-.add-unit-placeholder:hover { border-color: var(--jb-green); color: var(--jb-green); background: rgba(89, 168, 105, 0.05); }
-
-.card-footer { padding: 0 20px 20px; }
-.btn-ghost {
-	width: 100%; border: 1px dashed var(--border); color: var(--text-dim); background: transparent;
-	padding: 8px; cursor: pointer; border-radius: 4px; font-family: inherit; font-size: 11px;
-}
-.btn-ghost:hover { border-color: var(--jb-blue); color: var(--jb-blue); border-style: solid; }
-
-.btn {
-	background: #393b40; color: var(--text-main);
-	border: 1px solid var(--border); padding: 8px 18px;
-	cursor: pointer; font-family: inherit; font-size: 12px;
-	border-radius: 4px; transition: 0.2s;
-}
-.btn-primary { background: var(--jb-blue); border-color: var(--jb-blue); color: white; }
-.btn-primary:hover { background: #467ff2; }
-
-/* 弹窗样式 */
-/* 弹窗头部与底部对齐 */
 .modal-header {
-	padding: 20px 30px;
-	background: var(--bg-surface);
+	padding: 20px 25px;
+	background: #2b2d30;
 	border-bottom: 1px solid var(--border);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 }
-.modal-title {
-	font-size: 14px;
-	font-weight: 600;
-	color: var(--jb-blue);
+.modal-title { font-size: 14px; font-weight: 600; color: var(--jb-blue); text-transform: uppercase; }
+
+.modal-body {
+	flex: 1;
+	padding: 25px;
+	overflow-y: auto;
+	background: var(--bg-deep); /* 内容区稍微深一点，增加对比度 */
 }
 
 .modal-footer {
-	padding: 20px 30px;
-	display: flex;
-	gap: 15px;
-	background: rgba(0,0,0,0.1);
+	padding: 20px 25px;
+	background: var(--bg-surface);
 	border-top: 1px solid var(--border);
+	display: flex;
+	gap: 12px;
 }
 
-/* 针对日期选择器的 JB 风格微调 */
-input[type="date"]::-webkit-calendar-picker-indicator {
-	filter: invert(0.8); /* 让图标在深色模式下可见 */
-	cursor: pointer;
-}
-.modal-mask { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); backdrop-filter: blur(4px); display:flex; align-items:center; justify-content:center; z-index:1000; }
-.modal-box { background: var(--bg-surface); width: 700px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-.modal-tabs { display: flex; background: #2b2d30; border-bottom: 1px solid var(--border); }
-.tab-btn { flex: 1; padding: 14px; background: transparent; border: none; color: var(--text-dim); cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; }
-.tab-btn.active { color: var(--jb-blue); border-bottom: 3px solid var(--jb-blue); }
-.modal-body { padding: 30px; max-height: 70vh; overflow-y: auto; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; color: var(--text-dim); font-size: 11px; margin-bottom: 8px; font-weight: 600; }
+/* --- 6. 通用表单元素 --- */
+.form-group { margin-bottom: 24px; }
+.form-group label { display: block; color: var(--text-dim); font-size: 11px; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; }
 .form-group input, .form-group select, .form-group textarea {
-	width: 100%; background: #1e1f22; border: 1px solid var(--border); color: var(--text-main);
-	padding: 10px; font-family: inherit; box-sizing: border-box; border-radius: 4px;
+	width: 100%; background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-main);
+	padding: 10px; font-family: 'JetBrains Mono', monospace; box-sizing: border-box; border-radius: 4px; outline: none; transition: 0.2s;
 }
-.form-group input:focus { border-color: var(--jb-blue); outline: none; }
+.form-group input:focus, .form-group select:focus { border-color: var(--jb-blue); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.hint { display: block; font-size: 10px; color: var(--text-dim); margin-top: 6px; line-height: 1.4; }
 
+/* --- 7. 按钮体系 --- */
+.btn {
+	background: #393b40; color: var(--text-main); border: 1px solid var(--border);
+	padding: 8px 18px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 12px;
+}
+.btn-primary { background: var(--jb-blue); border-color: var(--jb-blue); color: white; font-weight: 600; }
+.btn-primary:hover { background: #467ff2; }
+
+/* --- 8. 滚动条 --- */
 ::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #393b40; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #4e5157; }

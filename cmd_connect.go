@@ -13,7 +13,8 @@ import (
 // MatchResult 存储匹配到的结果及上下文
 type MatchResult struct {
 	Node *Node
-	App  *App // 如果是直接匹配到 Node，则 App 为 nil
+	User *User // 必须包含用户上下文
+	App  *App
 }
 
 // RunConnect 根据目标名进行搜索，支持多结果交互选择
@@ -26,20 +27,27 @@ func RunConnect(target string, subCmd string) {
 
 	var matches []MatchResult
 
-	// 1. 搜集所有匹配项
+	// 1. 遍历三层结构进行匹配
 	for _, ws := range conf.Workspaces {
 		for i := range ws.Nodes {
 			node := &ws.Nodes[i]
-			// 匹配服务器名
+			// A. 匹配节点名
 			if strings.Contains(strings.ToLower(node.Name), strings.ToLower(target)) {
-				// 如果直接匹配到服务器，我们也把它加入备选
-				matches = append(matches, MatchResult{Node: node, App: nil})
+				// 如果直接匹配到节点，默认使用该节点下的第一个用户
+				if len(node.Users) > 0 {
+					matches = append(matches, MatchResult{Node: node, User: &node.Users[0], App: nil})
+				}
 			}
-			// 匹配应用名
-			for j := range node.Apps {
-				app := &node.Apps[j]
-				if strings.Contains(strings.ToLower(app.Name), strings.ToLower(target)) {
-					matches = append(matches, MatchResult{Node: node, App: app})
+
+			// B. 遍历用户
+			for k := range node.Users {
+				user := &node.Users[k]
+				// C. 遍历应用
+				for j := range user.Apps {
+					app := &user.Apps[j]
+					if strings.Contains(strings.ToLower(app.Name), strings.ToLower(target)) {
+						matches = append(matches, MatchResult{Node: node, User: user, App: app})
+					}
 				}
 			}
 		}
@@ -60,16 +68,15 @@ func RunConnect(target string, subCmd string) {
 		fmt.Printf("找到多个与 '%s' 相关的目标，请选择:\n\n", target)
 		for i, m := range matches {
 			if m.App != nil {
-				// 输出格式: 1、[应用名] (项目名) - 部署在 [服务器名](IP)
-				fmt.Printf("%d、%s (%s) - [%s (%s)]\n", i+1, m.App.Name, m.App.Project, m.Node.Name, m.Node.IP)
+				// 输出格式: 1、[应用名] (项目名) - 用户:[用户名] @ [服务器名](IP)
+				fmt.Printf("%d、%s (%s) - 用户:%s @ [%s (%s)]\n", i+1, m.App.Name, m.App.Project, m.User.Username, m.Node.Name, m.Node.IP)
 			} else {
-				// 输出格式: 2、[服务器名] (IP)
-				fmt.Printf("%d、服务器: %s (%s)\n", i+1, m.Node.Name, m.Node.IP)
+				// 输出格式: 2、服务器: [服务器名] (IP) - 默认用户: [用户名]
+				fmt.Printf("%d、服务器: %s (%s) - 默认用户: %s\n", i+1, m.Node.Name, m.Node.IP, m.User.Username)
 			}
 		}
 		fmt.Print("\n请输入数字编号选择，输入 'n' 取消: ")
 
-		// 读取用户输入
 		reader := bufio.NewReader(os.Stdin)
 		input, _ := reader.ReadString('\n')
 		input = strings.TrimSpace(input)
@@ -94,61 +101,67 @@ func RunConnect(target string, subCmd string) {
 // startSSH 构建并执行最终的 SSH 命令
 func startSSH(m MatchResult, subCmd string) {
 	node := m.Node
+	user := m.User // 从 MatchResult 直接获取 User 对象
 	app := m.App
 
-	dest := fmt.Sprintf("%s@%s", node.User, node.IP)
 	var remoteCmd string
 
+	// 如果匹配到了应用，处理路径和子命令逻辑
 	if app != nil {
 		appDir := app.DeployPath
 		switch subCmd {
 		case "logs":
-			// 只有 App 匹配时才支持 logs。优先检查错误日志，无输入则默认 OutLog
 			logFile := resolvePath(appDir, app.OutLogPath)
 			remoteCmd = fmt.Sprintf("cd %s && tail -f %s", appDir, logFile)
 		case "start", "stop", "restart", "status":
 			script := resolvePath(appDir, app.ManagerScript)
 			remoteCmd = fmt.Sprintf("cd %s && bash %s %s", appDir, script, subCmd)
 		default:
+			// 默认：登录并跳转目录
 			remoteCmd = fmt.Sprintf("cd %s && bash --login", appDir)
 		}
 	}
 
-	executeSSH(dest, remoteCmd)
+	// 修正：传入 Node 对象, User 对象, 以及命令字符串
+	executeSSH(node, user, remoteCmd)
 }
 
 // resolvePath 辅助函数：处理相对路径和绝对路径
 func resolvePath(base string, target string) string {
+	// 如果是绝对路径
 	if filepath.IsAbs(target) || strings.HasPrefix(target, "/") {
 		return target
 	}
 	// 如果是相对路径，则拼接在部署目录之后
-	return filepath.Join(base, target)
+	// 注意：这里用 path 而不是 filepath，因为远程服务器通常是 Linux
+	return strings.TrimSuffix(base, "/") + "/" + strings.TrimPrefix(target, "/")
 }
 
 // executeSSH 调用系统 SSH 客户端
-func executeSSH(dest string, remoteCmd string) {
+func executeSSH(node *Node, user *User, remoteCmd string) {
+	// 修正：从 user.Username 获取用户名
+	dest := fmt.Sprintf("%s@%s", user.Username, node.IP)
 	args := []string{dest}
+
 	if remoteCmd != "" {
-		// 使用 -t 强制分配伪终端，否则 cd 完之后会断开连接
 		args = append(args, "-t", remoteCmd)
 	}
 
-	fmt.Printf(">>> 正在连接: %s\n", dest)
-	if remoteCmd != "" {
-		fmt.Printf(">>> 执行指令: %s\n", remoteCmd)
+	// 逻辑：如果设置了密码，给予提醒
+	fmt.Println("------------------------------------------------")
+	if user.Password != "" {
+		fmt.Printf("[AUTH] 用户 [%s] 已设置密码。\n", user.Username)
+		fmt.Printf("[PWD]  密码为: %s (请在下方提示时输入/粘贴)\n", user.Password)
+	} else {
+		fmt.Printf("[AUTH] 未设置密码，尝试通过本地 SSH Key (免密) 登录...\n")
 	}
+	fmt.Printf("[DEST] 目标地址: %s\n", dest)
+	fmt.Println("------------------------------------------------")
 
 	cmd := exec.Command("ssh", args...)
-
-	// 关键点：将系统的标准输入、输出、错误流重定向给 SSH 命令
-	// 这样你才能在 iTerm2 里看到远程界面并输入密码/命令
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	err := cmd.Run()
-	if err != nil {
-		fmt.Printf("SSH 连接已断开: %v\n", err)
-	}
+	_ = cmd.Run()
 }

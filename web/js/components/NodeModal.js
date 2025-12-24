@@ -1,3 +1,13 @@
+(function() {
+	const css = `
+        .nm-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); cursor: pointer; }
+    `;
+	const nmStyle = document.createElement('style');
+	nmStyle.innerHTML = css;
+	document.head.appendChild(nmStyle);
+})();
+
 window.NodeModal = {
 	props: ['node', 't'],
 	template: `

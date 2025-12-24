@@ -15,6 +15,9 @@ import (
 //go:embed web/*
 var webFiles embed.FS
 
+// AppVersion 版本号
+const AppVersion = "0.1.1"
+
 //TIP To run your code, right-click the code and select <b>Run</b>. Alternatively, click
 // the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.
 
@@ -109,6 +112,7 @@ func startWebServer() {
 }
 
 func printUsage() {
+	fmt.Printf("OpsHop // Version: %s\n", AppVersion)
 	println("OpsHop // 使用说明:")
 	println("  opshop ui              - 启动可视化面板")
 	println("  opshop <应用名>         - 快速连接并跳转目录")

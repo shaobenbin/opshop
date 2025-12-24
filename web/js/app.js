@@ -7,76 +7,155 @@ const app = createApp({
 			config: { workspaces: [] },
 			currentWsId: null,
 			editingApp: null,
-			editingNode: null
+			editingNode: null,
+			editingUser: null,
+			currentEditContext: { nodeId: null, userId: null },
+			langOptions: ['Java', 'Python', 'Golang', 'Rust', 'PHP', 'Node', 'Html', 'Other'],
+			typeOptions: ['api', 'web', 'wap', '独立应用程序', 'web服务应用', '其它'],
 		}
 	},
 	components: {
 		'node-card': window.NodeCard,
 		'app-modal': window.AppModal,
-		'node-modal': window.NodeModal // 注册新组件
+		'node-modal': window.NodeModal,
+		'user-modal': window.UserModal
 	},
 	methods: {
 		t(key) { return window.i18nData[this.lang][key] || key; },
 		setLang(l) { this.lang = l; localStorage.setItem('opshop_lang', l); },
 		async loadConfig() {
 			const res = await fetch('/api/config');
-			this.config = await res.json();
-			if (this.config.workspaces.length > 0 && !this.currentWsId) this.currentWsId = this.config.workspaces[0].id;
+			const data = await res.json();
+			this.config = data && data.workspaces ? data : { workspaces: [] };
+			if (this.config.workspaces.length > 0 && !this.currentWsId) {
+				this.currentWsId = this.config.workspaces[0].id;
+			}
 		},
-		async _saveConfig() {
+		async saveConfig() {
 			await fetch('/api/config', { method: 'POST', body: JSON.stringify(this.config) });
 		},
-		// 业务逻辑...
+
+		// 辅助方法：关闭所有弹窗
+		closeAllModals() {
+			this.editingNode = null;
+			this.editingUser = null;
+			this.editingApp = null;
+		},
+
+		// --- Node 逻辑 ---
 		addNode() {
-			this.currentWorkspace.nodes.push({ id: Date.now().toString(), name: "NEW_NODE", ip: "0.0.0.0", user: "root", apps: [], cpu: 1, memory: "1G" });
-			this._saveConfig();
+			this.currentWorkspace.nodes.push({
+				id: Date.now().toString(), name: "NEW_NODE", ip: "0.0.0.0",
+				users: [], cpu: 1, memory: "1G", provider: 'aliyun'
+			});
+			this.saveConfig();
 		},
 		editNode(node) {
+			this.closeAllModals(); // 先关闭其他的
 			this.editingNode = JSON.parse(JSON.stringify(node));
-			this._saveConfig();
+		},
+		saveNodeEdit(updatedNode) {
+			const idx = this.currentWorkspace.nodes.findIndex(n => n.id === updatedNode.id);
+			if (idx !== -1) {
+				this.currentWorkspace.nodes[idx] = updatedNode;
+				this.editingNode = null;
+				this.saveConfig();
+			}
 		},
 		deleteNode(nodeId) {
 			const idx = this.currentWorkspace.nodes.findIndex(n => n.id === nodeId);
-			if (idx !== -1) {
+			if (idx !== -1 && window.confirm(this.t('confirm_del_node'))) {
 				this.currentWorkspace.nodes.splice(idx, 1);
-				this._saveConfig();
+				this.saveConfig();
 			}
 		},
 
-		deleteApp({ nodeId, appId }) {
+		// --- User 逻辑 (修复 push 报错) ---
+		addUser(nodeId) {
 			const node = this.currentWorkspace.nodes.find(n => n.id === nodeId);
 			if (node) {
-				const appIdx = node.apps.findIndex(a => a.id === appId);
-				if (appIdx !== -1) {
-					node.apps.splice(appIdx, 1);
-					this._saveConfig();
+				if (!node.users) node.users = []; // 防御性初始化，修复报错
+				const newUser = { id: Date.now().toString(), username: 'new-user', password: '', apps: [] };
+				node.users.push(newUser);
+				this.saveConfig();
+			}
+		},
+		editUser({ nodeId, user }) {
+			this.closeAllModals();
+			this.currentEditContext.nodeId = nodeId;
+			this.editingUser = JSON.parse(JSON.stringify(user));
+		},
+		saveUserEdit(updatedUser) {
+			const node = this.currentWorkspace.nodes.find(n => n.id === this.currentEditContext.nodeId);
+			if (node) {
+				const idx = node.users.findIndex(u => u.id === updatedUser.id);
+				if (idx !== -1) {
+					node.users[idx] = updatedUser;
+					this.editingUser = null;
+					this.saveConfig();
 				}
 			}
 		},
-		saveNodeEdit() {
-			const idx = this.currentWorkspace.nodes.findIndex(n => n.id === this.editingNode.id);
-			this.currentWorkspace.nodes[idx] = this.editingNode;
-			this.editingNode = null; this._saveConfig();
+		deleteUser({ nodeId, userId }) {
+			const node = this.currentWorkspace.nodes.find(n => n.id === nodeId);
+			if (node) {
+				const idx = node.users.findIndex(u => u.id === userId);
+				if (idx !== -1) {
+					node.users.splice(idx, 1);
+					this.saveConfig();
+				}
+			}
 		},
-		openAppEditor(app) {
-			if (!app.health) app.health = { url: "", keyword: "" };
+
+		// --- App 逻辑 ---
+		addApp({ nodeId, userId }) {
+			this.closeAllModals();
+			const node = this.currentWorkspace.nodes.find(n => n.id === nodeId);
+			const user = node?.users.find(u => u.id === userId);
+			if (user) {
+				if (!user.apps) user.apps = [];
+				user.apps.push({
+					id: Date.now().toString(), name: "NEW_APP", deploy_path: "/opt",
+					port: 80, project: "SYS", app_type: 'api', lang: 'Java',
+					health: {url:"", keyword:""}
+				});
+				this.saveConfig();
+			}
+		},
+		openAppEditor({ nodeId, userId, app }) {
+			this.closeAllModals();
+			this.currentEditContext = { nodeId, userId };
 			this.editingApp = JSON.parse(JSON.stringify(app));
 		},
 		saveAppEdit(updatedApp) {
-			this.currentWorkspace.nodes.forEach(node => {
-				const idx = node.apps.findIndex(a => a.id === updatedApp.id);
-				if (idx !== -1) node.apps[idx] = updatedApp;
-			});
-			this.editingApp = null;
-			this._saveConfig();
+			const node = this.currentWorkspace.nodes.find(n => n.id === this.currentEditContext.nodeId);
+			const user = node?.users.find(u => u.id === this.currentEditContext.userId);
+			if (user) {
+				const idx = user.apps.findIndex(a => a.id === updatedApp.id);
+				if (idx !== -1) {
+					user.apps[idx] = updatedApp;
+					this.editingApp = null;
+					this.saveConfig();
+				}
+			}
 		},
-		addApp(node) {
-			node.apps.push({ id: Date.now().toString(), name: "NEW_APP", deploy_path: "/opt", port: 8080, project: "SYS", health: {url:"", keyword:""} });
-			this._saveConfig();
+		deleteApp({ nodeId, userId, appId }) {
+			const node = this.currentWorkspace.nodes.find(n => n.id === nodeId);
+			const user = node?.users.find(u => u.id === userId);
+			if (user) {
+				const idx = user.apps.findIndex(a => a.id === appId);
+				if (idx !== -1) {
+					user.apps.splice(idx, 1);
+					this.saveConfig();
+				}
+			}
 		}
 	},
 	computed: {
-		currentWorkspace() { return this.config.workspaces.find(ws => ws.id === this.currentWsId); }
+		currentWorkspace() {
+			if(!this.config.workspaces) return null;
+			return this.config.workspaces.find(ws => ws.id === this.currentWsId);
+		}
 	},
 	mounted() { this.loadConfig(); }
 });
