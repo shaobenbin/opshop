@@ -21,8 +21,73 @@ const app = createApp({
 		'user-modal': window.UserModal
 	},
 	methods: {
-		t(key) { return window.i18nData[this.lang][key] || key; },
+		/**
+		 * 翻译函数
+		 * @param {string} key - 翻译键名
+		 * @param {boolean} forceEn - 是否强制显示中英对照 (默认 false)
+		 */
+		t(key, forceEn = false) {
+			// 1. 获取英文原始定义 (作为基准或括号内的内容)
+			const enVal = (window.i18nData['en'] && window.i18nData['en'][key]) || key;
+
+			// 2. 如果当前设置就是英文，直接返回
+			if (this.lang === 'en') {
+				return enVal;
+			}
+
+			// 3. 获取当前语言翻译 (如中文)
+			const curVal = (window.i18nData[this.lang] && window.i18nData[this.lang][key]) || enVal;
+
+			// 4. 判断是否需要显示对照格式
+			// 逻辑：要求强制显示对照 && 中文翻译不为空 && 中文和英文不完全一致
+			if (forceEn && curVal !== enVal) {
+				return `${curVal} (${enVal})`;
+			}
+
+			// 5. 默认只返回当前语言翻译
+			return curVal;
+		},
 		setLang(l) { this.lang = l; localStorage.setItem('opshop_lang', l); },
+		// 统一的删除全局项方法
+		deleteGlobalItem(category, id) {
+			const map = { 'project': 'projects', 'lang': 'langs', 'appType': 'app_types', "nodeProvider": 'node_providers' };
+			const listName = map[category];
+			const list = this.config[listName];
+
+			const index = list.findIndex(item => item.id === id);
+			if (index === -1) return;
+
+			const item = list[index];
+
+			// 核心拦截逻辑：系统默认项不允许删除
+			if (item.is_default) {
+				alert(this.t('err_default_no_delete') || "System default items cannot be deleted!");
+				return;
+			}
+
+			if (window.confirm(`${this.t('confirm_delete')} [${item.name}]?`)) {
+				list.splice(index, 1);
+				this.saveConfig();
+			}
+		},
+		// handleCreateGlobalItem 也需要标记新创建的为非默认
+		handleCreateGlobalItem({ category, name }, callback) {
+			const map = { 'project': 'projects', 'lang': 'langs', 'appType': 'app_types', "nodeProvider": 'node_providers' };
+			const listName = map[category];
+			if (!this.config[listName]) this.config[listName] = [];
+
+			let item = this.config[listName].find(i => i.name === name);
+			if (!item) {
+				item = {
+					id: Date.now().toString(),
+					name: name,
+					is_default: false // 用户创建的标记为 false
+				};
+				this.config[listName].push(item);
+				this.saveConfig();
+			}
+			if (callback) callback(item);
+		},
 		async loadConfig() {
 			const res = await fetch('/api/config');
 			const data = await res.json();
@@ -149,7 +214,7 @@ const app = createApp({
 					this.saveConfig();
 				}
 			}
-		}
+		},
 	},
 	computed: {
 		currentWorkspace() {

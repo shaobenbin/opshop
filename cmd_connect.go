@@ -69,7 +69,7 @@ func RunConnect(target string, subCmd string) {
 		for i, m := range matches {
 			if m.App != nil {
 				// 输出格式: 1、[应用名] (项目名) - 用户:[用户名] @ [服务器名](IP)
-				fmt.Printf("%d、%s (%s) - 用户:%s @ [%s (%s)]\n", i+1, m.App.Name, m.App.Project, m.User.Username, m.Node.Name, m.Node.IP)
+				fmt.Printf("%d、%s (%s) - 用户:%s @ [%s (%s)]\n", i+1, m.App.Name, m.App.SourcePath, m.User.Username, m.Node.Name, m.Node.IP)
 			} else {
 				// 输出格式: 2、服务器: [服务器名] (IP) - 默认用户: [用户名]
 				fmt.Printf("%d、服务器: %s (%s) - 默认用户: %s\n", i+1, m.Node.Name, m.Node.IP, m.User.Username)

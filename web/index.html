@@ -23,7 +23,7 @@
 			</div>
 		</div>
 		<div style="padding:20px; border-top:1px solid var(--border);">
-			<button class="btn" style="width:100%" @click="addWorkspace">+ NEW_WS</button>
+			<button class="btn" style="width:100%" @click="addWorkspace">+ {{ t('new_ws') }}</button>
 		</div>
 	</aside>
 
@@ -35,7 +35,13 @@
 		<div class="grid" v-if="currentWorkspace">
 			<node-card
 				v-for="node in currentWorkspace.nodes"
-				:key="node.id" :node="node" :t="t"
+				:key="node.id"
+				:node="node"
+				:t="t"
+				:all-node-providers="config.node_providers"
+				:all-projects="config.projects"
+				:all-langs="config.langs"
+				:all-app-types="config.app_types"
 				@edit-node="editNode"
 				@delete-node="deleteNode"
 				@add-user="addUser"
@@ -53,12 +59,28 @@
 	</main>
 
 	<!-- Modals -->
-	<node-modal v-if="editingNode" :node="editingNode" :t="t" @close="editingNode = null" @save="saveNodeEdit"></node-modal>
+	<node-modal
+		v-if="editingNode"
+		:node="editingNode"
+		:t="t"
+		:all-node-providers="config.node_providers"
+		@close="editingNode = null"
+		@save="saveNodeEdit">
+	</node-modal>
+
 	<user-modal v-if="editingUser" :user="editingUser" :t="t" @close="editingUser = null" @save="saveUserEdit"></user-modal>
+
 	<app-modal
-		v-if="editingApp" :app="editingApp" :t="t"
-		:lang-options="langOptions" :type-options="typeOptions"
-		@close="editingApp = null" @save="saveAppEdit">
+		v-if="editingApp"
+		:app="editingApp" :t="t"
+		:lang-options="langOptions"
+		:type-options="typeOptions"
+		:all-projects="config.projects"
+		:all-langs="config.langs"
+		:all-app-types="config.app_types"
+		@create-global-item="handleCreateGlobalItem"
+		@close="editingApp = null"
+		@save="saveAppEdit">
 	</app-modal>
 </div>
 

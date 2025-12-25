@@ -12,21 +12,78 @@ type HealthCheck struct {
 	Keyword string `yaml:"keyword" json:"keyword"`
 }
 
+// NodeProvider 节点提供商
+type NodeProvider struct {
+	ID        string `yaml:"id" json:"id"`
+	Name      string `yaml:"name" json:"name"`             // 云厂商名
+	IsDefault bool   `yaml:"is_default" json:"is_default"` // 是否为系统默认
+}
+
+// Project 全局项目实体
+type Project struct {
+	ID   string `yaml:"id" json:"id"`
+	Name string `yaml:"name" json:"name"` // 业务名称：如“分销系统”
+}
+
+// Lang 全局语言实体
+type Lang struct {
+	ID        string `yaml:"id" json:"id"`
+	Name      string `yaml:"name" json:"name"`
+	IsDefault bool   `yaml:"is_default" json:"is_default"` // 是否为系统默认
+}
+
+// AppType 全局应用类型实体
+type AppType struct {
+	ID        string `yaml:"id" json:"id"`
+	Name      string `yaml:"name" json:"name"`
+	IsDefault bool   `yaml:"is_default" json:"is_default"` // 是否为系统默认
+}
+
+// DefaultLangs 定义系统默认Lang值
+var DefaultLangs = []Lang{
+	{ID: "def_java", Name: "Java", IsDefault: true},
+	{ID: "def_python", Name: "Python", IsDefault: true},
+	{ID: "def_golang", Name: "Golang", IsDefault: true},
+	{ID: "def_rust", Name: "Rust", IsDefault: true},
+	{ID: "def_nodejs", Name: "Node.js", IsDefault: true},
+}
+
+// DefaultAppTypes 定义系统默认AppTypes值
+var DefaultAppTypes = []AppType{
+	{ID: "def_api", Name: "api", IsDefault: true},
+	{ID: "def_web", Name: "web", IsDefault: true},
+	{ID: "def_wap", Name: "wap", IsDefault: true},
+	{ID: "def_app", Name: "独立应用程序", IsDefault: true},
+	{ID: "def_service", Name: "web服务应用", IsDefault: true},
+}
+
+var DefaultNodeProviders = []NodeProvider{
+	{ID: "def_aliyun", Name: "Aliyun (阿里云)", IsDefault: true},
+	{ID: "def_tencent_count", Name: "Tencent (腾讯云)", IsDefault: true},
+	{ID: "def_huawei_cloud", Name: "Huawei (华为云)", IsDefault: true},
+	{ID: "def_baidu_cloud", Name: "Huawei (百度云)", IsDefault: true},
+	{ID: "def_aws_cloud", Name: "AWS", IsDefault: true},
+	{ID: "def_azure_cloud", Name: "Azure", IsDefault: true},
+	{ID: "def_google_cloud", Name: "Google Cloud", IsDefault: true},
+	{ID: "def_local_service", Name: "Local (自建/其他)", IsDefault: true},
+}
+
 // App 模型升级
 type App struct {
 	ID            string      `yaml:"id" json:"id"`
 	Name          string      `yaml:"name" json:"name"`
-	Project       string      `yaml:"project" json:"project"`
-	DeployPath    string      `yaml:"deploy_path" json:"deploy_path"` // 部署目录
-	Domain        string      `yaml:"domain" json:"domain"`           // 外部域名 (新)
-	Lang          string      `yaml:"lang" json:"lang"`
-	AppType       string      `yaml:"app_type" json:"app_type"`
-	Port          int         `yaml:"port" json:"port"`                     // 内部端口
-	OutLogPath    string      `yaml:"out_log_path" json:"out_log_path"`     // 输出日志 (stdout)
-	ErrLogPath    string      `yaml:"err_log_path" json:"err_log_path"`     // 错误日志 (stderr)
-	ManagerScript string      `yaml:"manager_script" json:"manager_script"` // 管理脚本 (script)
+	ProjectID     string      `yaml:"project_id" json:"project_id"`   // 关联全局 Project ID
+	SourcePath    string      `yaml:"source_path" json:"source_path"` // 源码路径：slan_agri_spot_exchange/rest/app
+	DeployPath    string      `yaml:"deploy_path" json:"deploy_path"`
+	Domain        string      `yaml:"domain" json:"domain"`
+	LangID        string      `yaml:"lang_id" json:"lang_id"`         // 改为关联 ID
+	AppTypeID     string      `yaml:"app_type_id" json:"app_type_id"` // 改为关联 ID
+	Port          int         `yaml:"port" json:"port"`
+	OutLogPath    string      `yaml:"out_log_path" json:"out_log_path"`
+	ErrLogPath    string      `yaml:"err_log_path" json:"err_log_path"`
+	ManagerScript string      `yaml:"manager_script" json:"manager_script"`
 	Tags          []string    `yaml:"tags" json:"tags"`
-	Remarks       string      `yaml:"remarks" json:"remarks"` // 备注 (已移至基本配置)
+	Remarks       string      `yaml:"remarks" json:"remarks"`
 	Health        HealthCheck `yaml:"health" json:"health"`
 }
 
@@ -42,7 +99,7 @@ type Node struct {
 	ID         string `yaml:"id" json:"id"`
 	Name       string `yaml:"name" json:"name"`
 	IP         string `yaml:"ip" json:"ip"`
-	Provider   string `yaml:"provider" json:"provider"`
+	ProviderId string `yaml:"provider_id" json:"provider_id"`
 	Owner      string `yaml:"owner" json:"owner"`
 	CPU        int    `yaml:"cpu" json:"cpu"`               // CPU 核数 (vCPU)
 	Memory     string `yaml:"memory" json:"memory"`         // 内存大小 (e.g. 8G)
@@ -58,7 +115,11 @@ type Workspace struct {
 }
 
 type Config struct {
-	Workspaces []Workspace `yaml:"workspaces" json:"workspaces"`
+	Workspaces    []Workspace    `yaml:"workspaces" json:"workspaces"`
+	Projects      []Project      `yaml:"projects" json:"projects"`   // 全局项目库
+	Langs         []Lang         `yaml:"langs" json:"langs"`         // 全局语言库
+	AppTypes      []AppType      `yaml:"app_types" json:"app_types"` // 全局类型库
+	NodeProviders []NodeProvider `yaml:"node_providers" json:"node_providers"`
 }
 
 // --- 持久化逻辑保持不变 ---
@@ -83,7 +144,60 @@ func LoadConfig() (*Config, error) {
 	if conf.Workspaces == nil {
 		conf.Workspaces = []Workspace{}
 	}
+
+	// 核心逻辑：确保系统默认值始终存在 (防止用户手动从 YAML 删除了默认值)
+	conf.Langs = mergeLangs(conf.Langs, DefaultLangs)
+	conf.AppTypes = mergeAppTypes(conf.AppTypes, DefaultAppTypes)
+	conf.NodeProviders = mergeNodeProviders(conf.NodeProviders, DefaultNodeProviders)
 	return conf, nil
+}
+
+// 辅助函数：合并用户自定义值和系统默认值
+func mergeLangs(current []Lang, defaults []Lang) []Lang {
+	m := make(map[string]Lang)
+	for _, item := range current {
+		m[item.ID] = item
+	}
+	for _, item := range defaults {
+		m[item.ID] = item
+	} // 强制覆盖/补充默认值
+
+	res := []Lang{}
+	for _, v := range m {
+		res = append(res, v)
+	}
+	return res
+}
+
+func mergeAppTypes(current []AppType, defaults []AppType) []AppType {
+	m := make(map[string]AppType)
+	for _, item := range current {
+		m[item.ID] = item
+	}
+	for _, item := range defaults {
+		m[item.ID] = item
+	}
+
+	res := []AppType{}
+	for _, v := range m {
+		res = append(res, v)
+	}
+	return res
+}
+
+func mergeNodeProviders(current []NodeProvider, defaults []NodeProvider) []NodeProvider {
+	m := make(map[string]NodeProvider)
+	for _, item := range current {
+		m[item.ID] = item
+	}
+	for _, item := range defaults {
+		m[item.ID] = item
+	}
+	res := []NodeProvider{}
+	for _, v := range m {
+		res = append(res, v)
+	}
+	return res
 }
 
 func SaveConfig(conf *Config) error {
