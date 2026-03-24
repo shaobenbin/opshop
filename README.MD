@@ -69,6 +69,8 @@ mv opshop /usr/local/bin/
 | 指令 | 说明                                       |
 | :--- |:-----------------------------------------|
 | `opshop ui` | 启动 Web 管理面板 (默认: http://127.0.0.1:18181) |
+| `opshop -v` | 显示版本号 |
+| `opshop -h` | 显示帮助信息 |
 | `opshop <name>` | 搜索目标并建立 SSH 连接 (自动跳转目录)                  |
 | `opshop <name> logs` | 快速查看目标应用的输出日志 (`tail -f`)                |
 | `opshop <name> restart` | 执行远程管理脚本进行重启                             |

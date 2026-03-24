@@ -1,10 +1,14 @@
 package main
 
 import (
+	_ "embed"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 )
+
+//go:embed config/default-config.yaml
+var defaultConfigYAML []byte
 
 // HealthCheck 健康检查配置
 type HealthCheck struct {
@@ -133,7 +137,15 @@ func LoadConfig() (*Config, error) {
 	conf := &Config{Workspaces: []Workspace{}}
 	data, readFileErr := os.ReadFile(path)
 	if readFileErr != nil {
-		return conf, nil
+		if os.IsNotExist(readFileErr) {
+			if err := initializeDefaultConfig(path); err != nil {
+				return nil, err
+			}
+			data, readFileErr = os.ReadFile(path)
+		}
+		if readFileErr != nil {
+			return nil, readFileErr
+		}
 	}
 
 	parseErr := yaml.Unmarshal(data, conf)
@@ -150,6 +162,13 @@ func LoadConfig() (*Config, error) {
 	conf.AppTypes = mergeAppTypes(conf.AppTypes, DefaultAppTypes)
 	conf.NodeProviders = mergeNodeProviders(conf.NodeProviders, DefaultNodeProviders)
 	return conf, nil
+}
+
+func initializeDefaultConfig(path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	return os.WriteFile(path, defaultConfigYAML, 0644)
 }
 
 // 辅助函数：合并用户自定义值和系统默认值

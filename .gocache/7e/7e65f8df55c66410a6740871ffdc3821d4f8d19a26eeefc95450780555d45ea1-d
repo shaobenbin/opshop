@@ -1,0 +1,4 @@
+./cmd_connect.go
+./config.go
+./main.go
+./main_test.go

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io/fs"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -22,30 +23,34 @@ const AppVersion = "0.1.1"
 // the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.
 
 func main() {
+	runApp(os.Args, os.Stdout, startWebServer, RunConnect)
+}
 
-	if len(os.Args) < 2 {
-		printUsage()
+func runApp(args []string, out io.Writer, startUI func(), runConnect func(string, string)) {
+	if len(args) < 2 {
+		printUsage(out)
 		return
 	}
-
-	// 获取命令行参数
-	args := os.Args
 
 	action := args[1]
 
 	switch action {
 	case "ui":
-		startWebServer()
+		startUI()
+	case "-v":
+		fmt.Fprintf(out, "OpsHop // Version: %s\n", AppVersion)
 	case "help":
-		printUsage()
+		fallthrough
+	case "-h":
+		printUsage(out)
 	default:
 		// 如果第一个参数不是 ui，那么它就是我们要连接的目标名
 		targetName := action
 		subCmd := ""
-		if len(os.Args) > 2 {
-			subCmd = os.Args[2] // 比如 logs, start 等
+		if len(args) > 2 {
+			subCmd = args[2] // 比如 logs, start 等
 		}
-		RunConnect(targetName, subCmd)
+		runConnect(targetName, subCmd)
 	}
 }
 
@@ -111,13 +116,15 @@ func startWebServer() {
 	}
 }
 
-func printUsage() {
-	fmt.Printf("OpsHop // Version: %s\n", AppVersion)
-	println("OpsHop // 使用说明:")
-	println("  opshop ui              - 启动可视化面板")
-	println("  opshop <应用名>         - 快速连接并跳转目录")
-	println("  opshop <应用名> logs    - 查看应用实时日志")
-	println("  opshop <应用名> restart - 重启应用服务")
+func printUsage(out io.Writer) {
+	fmt.Fprintf(out, "OpsHop // Version: %s\n", AppVersion)
+	fmt.Fprintln(out, "OpsHop // 使用说明:")
+	fmt.Fprintln(out, "  opshop ui              - 启动可视化面板")
+	fmt.Fprintln(out, "  opshop -v              - 显示版本号")
+	fmt.Fprintln(out, "  opshop -h              - 显示帮助信息")
+	fmt.Fprintln(out, "  opshop <应用名>         - 快速连接并跳转目录")
+	fmt.Fprintln(out, "  opshop <应用名> logs    - 查看应用实时日志")
+	fmt.Fprintln(out, "  opshop <应用名> restart - 重启应用服务")
 }
 
 //TIP See GoLand help at <a href="https://www.jetbrains.com/help/go/">jetbrains.com/help/go/</a>.

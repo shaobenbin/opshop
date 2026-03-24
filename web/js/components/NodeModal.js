@@ -12,7 +12,7 @@
 window.NodeModal = {
 	props: ['node', 't', 'allNodeProviders'],
 	methods: {
-		// 通用创建方法：category 为 'project' | 'lang' | 'type'
+		// 通用创建方法：当前弹窗只会创建 nodeProvider
 		promptNewItem(category) {
 			const name = prompt(`ENTER NEW NODE PROVIDER NAME:`);
 
@@ -76,7 +76,7 @@ window.NodeModal = {
 								</option>
 							</select>
 
-							<button class="btn" type="button" @click="promptNewItem('appType')">+</button>
+							<button class="btn" type="button" @click="promptNewItem('nodeProvider')">+</button>
 						</div>
                     </div>
                     <!-- 到期时间 -->

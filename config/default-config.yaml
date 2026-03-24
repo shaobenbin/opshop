@@ -1,61 +1,62 @@
 workspaces:
-    - id: "1766417695312"
-      name: 鲸鱼公司
-      nodes:
-          - id: "1766417755261"
-            name: 生产服务器-05
-            ip: 121.57.165.264
-            user: server
-            provider: aliyun
-            owner: 鲸鱼公司
-            cpu: 4
-            memory: 8G
-            expiration: "2026-11-14"
-            remarks: 生成服务器
-            apps:
-                - id: "1766417777836"
-                  name: 分销系统wap端
-                  project: distributor-wap
-                  deploy_path: /home/server/app/distributor/distributor-wap
-                  domain: https://wap.distributor.xxx.cn/
-                  lang: Uniapp
-                  app_type: wap
-                  port: 8080
-                  out_log_path: ""
-                  err_log_path: ""
-                  manager_script: ""
-                  tags: []
-                  remarks: uniapp项目
-                  health:
-                      url: ""
-                      keyword: ""
-                - id: "1766457506552"
-                  name: 分销系统wap端api服务
-                  project: ' distributor-api/distributor_client'
-                  deploy_path: /home/server/app/distributor/distributor_client_api
-                  domain: https://wap.distributor.xxx.cn
-                  lang: Java
-                  app_type: api
-                  port: 18833
-                  out_log_path: log/appout.log
-                  err_log_path: log/appout.log
-                  manager_script: distributor-client-api.sh
-                  tags: []
-                  remarks: ""
-                  health:
-                      url: ""
-                      keyword: ""
-          - id: "1766473321447"
-            name: NEW_NODE
-            ip: 0.0.0.0
-            user: root
-            provider: ""
-            owner: ""
-            cpu: 1
-            memory: 1G
-            expiration: ""
-            remarks: ""
-            apps: []
-    - id: "1766461712326"
-      name: 私人
-      nodes: []
+projects:
+langs:
+    - id: def_nodejs
+      name: Node.js
+      is_default: true
+    - id: "1766633490617"
+      name: Html
+      is_default: false
+    - id: def_java
+      name: Java
+      is_default: true
+    - id: def_python
+      name: Python
+      is_default: true
+    - id: def_golang
+      name: Golang
+      is_default: true
+    - id: def_rust
+      name: Rust
+      is_default: true
+app_types:
+    - id: def_web
+      name: web
+      is_default: true
+    - id: def_wap
+      name: wap
+      is_default: true
+    - id: def_app
+      name: 独立应用程序
+      is_default: true
+    - id: def_service
+      name: web服务应用
+      is_default: true
+    - id: def_api
+      name: api
+      is_default: true
+node_providers:
+    - id: def_aws_cloud
+      name: AWS
+      is_default: true
+    - id: def_tencent_count
+      name: Tencent (腾讯云)
+      is_default: true
+    - id: def_azure_cloud
+      name: Azure
+      is_default: true
+    - id: def_aliyun
+      name: Aliyun (阿里云)
+      is_default: true
+    - id: def_huawei_cloud
+      name: Huawei (华为云)
+      is_default: true
+    - id: def_google_cloud
+      name: Google Cloud
+      is_default: true
+    - id: def_local_service
+      name: Local (自建/其他)
+      is_default: true
+    - id: def_baidu_cloud
+      name: Huawei (百度云)
+      is_default: true
