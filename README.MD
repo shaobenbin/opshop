@@ -50,7 +50,7 @@
 
 ### 方式一：Homebrew (推荐)
 ```bash
-brew tap yourname/tap
+brew tap shaobenbin/tap
 brew install opshop
 ```
 

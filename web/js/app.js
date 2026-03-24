@@ -48,6 +48,16 @@ const app = createApp({
 			return curVal;
 		},
 		setLang(l) { this.lang = l; localStorage.setItem('opshop_lang', l); },
+		addWorkspace() {
+			const defaultName = this.t('new_ws');
+			const inputName = window.prompt(this.t('new_ws'), defaultName);
+			if (inputName === null) return;
+
+			const workspace = window.WorkspaceUtils.createWorkspace(inputName, Date.now, defaultName);
+			this.config.workspaces.push(workspace);
+			this.currentWsId = workspace.id;
+			this.saveConfig();
+		},
 		// 统一的删除全局项方法
 		deleteGlobalItem(category, id) {
 			const map = { 'project': 'projects', 'lang': 'langs', 'appType': 'app_types', "nodeProvider": 'node_providers' };
